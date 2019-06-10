@@ -136,16 +136,20 @@ defmodule PdfGenerator do
     with {html_file, pdf_file}       <- make_file_paths(options),
          :ok                         <- maybe_write_html(content, html_file),
          {executable, arguments}     <- make_command(generator, options, content, {html_file, pdf_file}),
-         {:cmd, {stderr, exit_code}} <- {:cmd, System.cmd(executable, arguments, stderr_to_stdout: true)},       # unfortuantely wkhtmltopdf returns 0 on errors as well :-/
+         {:cmd, {stderr, exit_code}} <- {:cmd, run_system_command(executable, arguments, stderr_to_stdout: true)},       # unfortuantely wkhtmltopdf returns 0 on errors as well :-/
          {:result_ok, true, _err}    <- {:result_ok, result_ok(generator, stderr, exit_code), stderr},           # so we inspect stderr instead
-         {:rm, :ok}                  <- {:rm, maybe_delete_temp(delete_temp, html_file)},
-         {:ok, encrypted_pdf}        <- maybe_encrypt_pdf(pdf_file, open_password, edit_password) do
-      {:ok, encrypted_pdf}
+         {:rm, :ok}                  <- {:rm, maybe_delete_temp(delete_temp, html_file)} do
+      {:ok, pdf_file}
     else
       {:error, reason}     -> {:error, reason}
       {:result_ok, _, err} -> {:error, {:generator_failed, err}}
       reason               -> {:error, reason}
     end
+  end
+
+  def run_system_command(executable, arguments, options) do
+    IO.puts("#{inspect executable} #{inspect arguments} #{inspect options}")
+    System.cmd(executable, arguments, options)
   end
 
   @spec maybe_write_html(content, path()) :: :ok | {:error, reason}
@@ -156,7 +160,7 @@ defmodule PdfGenerator do
   @spec make_file_paths(keyword()) :: {html_path, pdf_path}
   def make_file_paths(options) do
     filebase = options[:filename] |> generate_filebase()
-    {filebase <> ".html", filebase <> ".pdf"}
+    {filebase <> ".html", filebase <> "." <> options[:extension]}
   end
 
   def make_dimensions(options) when is_list(options) do
