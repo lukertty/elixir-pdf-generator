@@ -218,7 +218,6 @@ defmodule PdfGenerator do
     shell_params = options[:shell_params] || []
     arguments = List.flatten([
       shell_params,
-      "--page-size", options[:page_size] || "A4",
       source, pdf_path
     ])
     # for wkhtmltopdf we support prefixes like ["xvfb-run", "-a"] to precede the actual command
